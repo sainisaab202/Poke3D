@@ -22,19 +22,27 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         // Show statistics such as fps and timing information
         sceneView.showsStatistics = true
         
-        // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        sceneView.autoenablesDefaultLighting = true
         
-        // Set the scene to the view
-        sceneView.scene = scene
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         // Create a session configuration
-        let configuration = ARWorldTrackingConfiguration()
+        let configuration = ARImageTrackingConfiguration()
 
+        //setting/adding the images we want to detect
+        if let imageToTrack = ARReferenceImage.referenceImages(inGroupNamed: "Pokemon Cards", bundle: Bundle.main){
+            
+            configuration.trackingImages = imageToTrack
+            
+            configuration.maximumNumberOfTrackedImages = 2
+            
+            print("Images successfully added")
+        }
+
+        
         // Run the view's session
         sceneView.session.run(configuration)
     }
@@ -47,6 +55,47 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     }
 
     // MARK: - ARSCNViewDelegate
+
+    func renderer(_ renderer: any SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
+        let node = SCNNode()
+        
+        //if our images got detected
+        if let imageAnchor = anchor as? ARImageAnchor{
+            
+//            print(imageAnchor.referenceImage.name)
+            
+            //creating a plane
+            let plane = SCNPlane(width: imageAnchor.referenceImage.physicalSize.width, height: imageAnchor.referenceImage.physicalSize.height)
+            
+            //material of plane
+            plane.firstMaterial?.diffuse.contents = UIColor(white: 1.0, alpha: 0.8)
+            
+            let planeNode = SCNNode(geometry: plane)
+            
+            //normaly our planeNode will show up vertically, but in this case we need horizontally
+            //to cover our card
+            planeNode.eulerAngles.x = -.pi/2
+            
+            node.addChildNode(planeNode)
+            
+            let pokeName = imageAnchor.referenceImage.name == "eevee" ? "eevee" : "oddish"
+            
+            if let pokeScene = SCNScene(named: "art.scnassets/\(pokeName).scn"){
+                
+                if let pokeNode = pokeScene.rootNode.childNodes.first{
+                    
+                    pokeNode.eulerAngles.x = pokeName == "eevee" ? .pi/2 : .pi/2*2
+                    
+                    planeNode.addChildNode(pokeNode)
+                    print("displaying pokeNode")
+                    
+                }else { print("else of pokeNode") }
+            }else { print("else of pokeScene") }
+            
+        }
+        
+        return node
+    }
     
 /*
     // Override to create and configure nodes for anchors added to the view's session.
